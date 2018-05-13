@@ -1,5 +1,5 @@
-#include "redis_ypok.h"
 #include <redismodule.h>
+#include "redis_ypok.h"
 #define MODULE_NAME "ypok"
 #define MODULE_VERSION 1
 

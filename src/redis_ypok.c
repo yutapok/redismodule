@@ -1,16 +1,18 @@
-#include <zstd.h>
-
 #include <redismodule.h>
 #include "redis_ypok.h"
+#include <zstd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #define COMP_LEVEL 19
 
-int _RM_SetString(RedisModuleCtx, *ctx, RedisModuleString *key, RedisModuleString *val);
-int _CompressSet(RedisModuleCtx, *ctx, RedisModuleString *key, RedisModuleString *val);
+int _RM_SetString(RedisModuleCtx *ctx, RedisModuleString *key, RedisModuleString *val);
+int _CompressSet(RedisModuleCtx *ctx, RedisModuleString *key, RedisModuleString *val);
 
-int ZstdSetCommand(RedisModuleCtx, *ctx, RedisModuleString **argv, int argc)
+int ZstdSetCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc)
 {
 	if (argc < 2){
-		retrun RedisModule_WrongArity(ctx);
+		return RedisModule_WrongArity(ctx);
 	}
 	
 	int rc = _CompressSet(ctx, argv[1], argv[2]);
@@ -19,28 +21,28 @@ int ZstdSetCommand(RedisModuleCtx, *ctx, RedisModuleString **argv, int argc)
 	return rc;
 }
 
-int _CompressSet(RedisModuleCtx, *ctx, RedisModuleString *key, RedisModuleString *val)
+int _CompressSet(RedisModuleCtx *ctx, RedisModuleString *key, RedisModuleString *val)
 {
+	int rc;
 	RedisModuleString *zstd_val = NULL;
 	size_t size_of_data;
-	char *raw_data = (const char*)RedisModule_StringPtrLen(val, &size_of_data);
+	char *raw_data = (char*)RedisModule_StringPtrLen(val, &size_of_data);
         size_t estimated_size_of_compressed_data = ZSTD_compressBound(size_of_data);
         void* compressed_data = malloc(estimated_size_of_compressed_data);
 	
-	size_t actual_size_of_compressed_data =
-        ZSTD_compress(compressed_data, estimated_size_of_compressed_data,
-            raw_data, size_of_data, COMP_LEVEL);
-	zstd_val =  RedisModule_CreateString(ctx, (char*)compressed_data, actual_size_of_compressed_data)
+	size_t actual_size_of_compressed_data = ZSTD_compress(compressed_data, estimated_size_of_compressed_data,raw_data, size_of_data, COMP_LEVEL);
+	zstd_val =  RedisModule_CreateString(ctx, (char*)compressed_data, actual_size_of_compressed_data);
 	rc = _RM_SetString(ctx, key, zstd_val);
 	return rc;
 
 }
 
-int _RM_SetString(RedisModuleCtx, *ctx, RedisModuleString *key, RedisModuleString *val)
+int _RM_SetString(RedisModuleCtx *ctx, RedisModuleString *key, RedisModuleString *val)
 {
-	RedisModuleString *key = NULL;
+	int rc = REDISMODULE_OK;
+	RedisModuleString *tx_key = NULL;
 	tx_key = RedisModule_OpenKey(ctx, key, REDISMODULE_READ|REDISMODULE_WRITE);
-	rc = RedisModule_SetString(tx_key, val);
+	RedisModule_SetString(tx_key, val);
 	
 	RedisModule_CloseKey(tx_key);
 	
