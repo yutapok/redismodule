@@ -18,5 +18,14 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc)
 		return  REDISMODULE_ERR;
 	}
 
+
+	//zstd_get
+	//IN) zstd_get <key>
+	//OUT) <val>
+	//
+	if(RedisModule_CreateCommand(ctx, MODULE_NAME ".zstd_get", ZstdGetCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR){
+		return  REDISMODULE_ERR;
+	}
+
 	return REDISMODULE_OK;
 }
