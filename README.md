@@ -1,4 +1,5 @@
-# zstd redismodule  
+# redismodule  
+## RM with Zstandard
 Simple commands with zstd compression or decompression
 
 * make  
