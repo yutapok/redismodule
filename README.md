@@ -1,6 +1,6 @@
 # redismodule  
-## RM with Zstandard
-Simple commands with zstd compression or decompression
+## test
+simple rediscommands with compression or decompression
 
 * make  
 ```
