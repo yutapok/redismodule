@@ -7,8 +7,6 @@ extern "C" {
 
 extern int ZstdSetCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
 extern int ZstdGetCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
-extern int ZstdHashSetCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
-extern int ZstdHashGetCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
 
 #ifdef __cplusplus
 }
