@@ -1,6 +1,6 @@
 CC = gcc
 OBJS = redis_mod_ypok.o redis_ypok.o
-OPPFLAGS += -fPIC -Wall -O2  -I. -I/usr/local/include/redis -c
+OPPFLAGS += -fPIC -Wall -O2  -I. -c
 SOPPFLAGS += -shared -Wl,-z,relro -Wl,-soname,rmod_ypok.so
 LIBS = -lzstd
 PROGRAM = redis_module_ypok

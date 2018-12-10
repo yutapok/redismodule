@@ -38,6 +38,7 @@ int ZstdGetCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc)
     int rc = REDISMODULE_OK;
     if(_CompressGet(ctx, argv[1]) == REDISMODULE_ERR){
         rc = REDISMODULE_ERR;
+        RedisModule_ReplyWithNull(ctx);
         goto finally;
     }
 
@@ -50,17 +51,16 @@ finally:
 
 int _CompressSet(RedisModuleCtx *ctx, RedisModuleString *key, RedisModuleString *val)
 {
-    int rc;
+    int rc = REDISMODULE_OK;
     RedisModuleString *zstd_val = NULL;
     size_t size_of_data;
     char *raw_data = (char *)RedisModule_StringPtrLen(val, &size_of_data);
     size_t bound = ZSTD_compressBound(size_of_data);
-    void* compressed = RedisModule_Alloc(bound);
+    void* compressed = RedisModule_Alloc(bound + 1);
     
     size_t actual = ZSTD_compress(compressed, bound ,raw_data, size_of_data, COMP_LEVEL);
     if(ZSTD_isError(actual)){
         rc = REDISMODULE_ERR;
-        RedisModule_ReplyWithNull(ctx);
         goto finally;
     }
 
@@ -71,43 +71,48 @@ int _CompressSet(RedisModuleCtx *ctx, RedisModuleString *key, RedisModuleString 
     tx_key = RedisModule_OpenKey(ctx, key, REDISMODULE_READ|REDISMODULE_WRITE);
     RedisModule_StringSet(tx_key, zstd_val);
     RedisModule_CloseKey(tx_key);
-    rc = REDISMODULE_OK;
 
 finally:
-      return rc;
+    if (compressed != NULL){
+        RedisModule_Free(compressed); compressed=NULL;
+    }
+    return rc;
 }
 
 
 int _CompressGet(RedisModuleCtx *ctx, RedisModuleString *key)
 {
-  int rc = REDISMODULE_OK;
-  size_t len_compress;
+    int rc = REDISMODULE_OK;
+    size_t len_compress;
+    RedisModuleKey *tx_key = NULL;
+    char *compressed = NULL;
 
-  char *compressed = "yahoo";
-  if( NULL == compressed ){
-      rc = REDISMODULE_ERR;
-      RedisModule_ReplyWithNull(ctx);
-      goto finally;
-  }
+    tx_key = RedisModule_OpenKey(ctx, key, REDISMODULE_READ|REDISMODULE_WRITE);
+    compressed = RedisModule_StringDMA(tx_key, &len_compress, REDISMODULE_READ|REDISMODULE_WRITE);
+    RedisModule_CloseKey(tx_key);
 
-  RedisModuleString *tx_key = NULL;
-  unsigned long long len_decompress = ZSTD_getDecompressedSize(compressed, len_compress);
-  void* decompress = RedisModule_Alloc((size_t)len_decompress);
+    if (len_compress == 0){
+        rc = REDISMODULE_ERR;
+        goto finally;
+    }
 
-  size_t d_size = ZSTD_decompress(decompress, len_decompress, compressed, len_compress);
-  if(ZSTD_isError(d_size)){
-      rc = REDISMODULE_ERR;
-      RedisModule_ReplyWithNull(ctx);
-      goto finally;
-  }
 
-  RedisModule_ReplyWithStringBuffer(ctx, (char *)decompress, d_size);
+    unsigned long long len_decompress = ZSTD_getDecompressedSize(compressed, len_compress);
+    void* decompress = RedisModule_Alloc((size_t)len_decompress + 1);
+
+    size_t d_size = ZSTD_decompress(decompress, len_decompress, compressed, len_compress);
+    if(ZSTD_isError(d_size)){
+        rc = REDISMODULE_ERR;
+        goto finally;
+    }
+
+    RedisModule_ReplyWithStringBuffer(ctx, (char *)decompress, d_size);
 
 
 finally:
-  if( compressed != NULL ){
-      RedisModule_Free(decompress);compressed=NULL;
-  }
+    if( compressed != NULL ){
+        RedisModule_Free(decompress);compressed=NULL;
+    }
 
   return rc;
 }
